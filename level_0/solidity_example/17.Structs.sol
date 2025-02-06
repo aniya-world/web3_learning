@@ -79,6 +79,12 @@ contract Todos {
     }
 
 
-
+    // Solidity 中的 Todo 结构体数组确实可以类比为 Python 中的列表和字典的组合
+    /* the python code is like:
+	    todos = [
+		    {"text": "Buy groceries", "completed": False},
+		    {"text": "Walk the dog", "completed": True},
+		]
+	*/
 }
  
