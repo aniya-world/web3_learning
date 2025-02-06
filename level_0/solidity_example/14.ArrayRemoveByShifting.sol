@@ -2,12 +2,16 @@
 pragma solidity ^0.8.24;
 
 // Examples of removing array element
+
+
 contract ArrayRemoveByShifting {
 
     uint256[] public arr = [1,2,3];
 
     function remove(uint256 _index) public{
         require(_index<arr.length,"index out of bound");
+        
+        // Remove array element by shifting elements from right to left
         for (uint256 i=_index; i<arr.length-1; i++) {
              // [1, 2, 3] -- remove(1) --> [1, 3, 3] --> [1, 3]
              // [1, 2, 3, 4, 5, 6] -- remove(0) --> [2,3,4,5,6,6] --> [2,3,4,5,6]
