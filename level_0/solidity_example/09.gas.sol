@@ -18,7 +18,15 @@ Unspent gas will be refunded.
 contract Gas {
 
     uint256 public i = 0;
+    /*
+    Using up all of the gas that you send causes your transaction to fail.
+     用完您发送的所有gas会导致交易失败
+    State changes are undone.
+     状态更改会撤消。
+    Gas spent are not refunded.
+     已消耗的gas不予退还。
 
+    */
     function forever() public {
         while (true) {
             i+=1;
