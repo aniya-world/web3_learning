@@ -12,7 +12,9 @@ mapping 的基本语法如下：
 mapping(keyType => valueType) public mappingName;
 
 keyType  ：键的类型，可以是任何基本数据类型（如 uint, address, bytes32 等），但不能是引用类型（如数组或结构体）。The keyType can be any built-in value type, bytes, string, or any contract.
+
 valueType：值的类型，可以是任何类型，包括基本数据类型、结构体、数组或其他 mapping。 valueType can be any type including another mapping or an array.
+
 mappingName：你为这个 mapping 选择的名称。
 */
 
