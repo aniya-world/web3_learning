@@ -1,4 +1,4 @@
-pragma solidity >=0.4.25 <0.9.0; 
+pragma solidity >=0.4.25; 
 // https://github.com/RemoteCodeCamp/openWeb3/blob/main/03.%E4%BD%BF%E7%94%A8Solidity%20%E7%BC%96%E5%86%99%20Ethereum%E6%99%BA%E8%83%BD%E5%90%88%E5%90%8C.md
 // 用于管理运输状态
 contract Shipping { 
