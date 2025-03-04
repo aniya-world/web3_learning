@@ -27,7 +27,7 @@ contract MultiSigWallet {
     // 状态变量
     address[] public owners;
     // 映射 isOwner，用于检查某个地址是否为钱包的所有者
-    mapping(address => bool) public isOwner;3
+    mapping(address => bool) public isOwner;
     // 公共状态变量 required，表示执行交易所需的批准数量
     uint256 public required;
     // 结构体 Transaction 用于表示交易的相关信息，包括接收地址、金额、数据和是否已执行的状态。
