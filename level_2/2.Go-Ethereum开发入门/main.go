@@ -1,112 +1,94 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"math/big"
+    "context"
+    "crypto/ecdsa"
+    "fmt"
+    "log"
+    "math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+    "golang.org/x/crypto/sha3"
+
+    "github.com/ethereum/go-ethereum"
+    "github.com/ethereum/go-ethereum/common"
+    "github.com/ethereum/go-ethereum/common/hexutil"
+    "github.com/ethereum/go-ethereum/core/types"
+    "github.com/ethereum/go-ethereum/crypto"
+    "github.com/ethereum/go-ethereum/ethclient"
 )
 
 func main() {
-	client, err := ethclient.Dial("https://sepolia.infura.io/v3/7b17119e325545f9b000356999f07ac4")
-	if err != nil {
-		log.Fatal(err)
-	}
-	////// Method 1 : 当使用 `BlockByNumber` 方法获取到完整的区块信息之后，可以调用区块实例的 `Transactions` 方法来读取块中的交易，该方法返回一个 `Transaction` 类型的列表。 循环遍历集合并获取交易的信息。
+    client, err := ethclient.Dial("https://eth-sepolia.g.alchemy.com/v2/")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// show the chain called id;  restore sender addr needs it
-	// 使用 context.Background() 通常表示你没有特定的上下文需求，适用于根级别的请求或在没有其他上下文可用的情况下使用
-	chainID, err := client.ChainID(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
+    privateKey, err := crypto.HexToECDSA("账户私钥")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// get the block 5671744
-	blockNumber := big.NewInt(5671744)
-	block, err := client.BlockByNumber(context.Background(), blockNumber)
-	if err != nil {
-		log.Fatal(err)
-	}
+    publicKey := privateKey.Public()
+    publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+    if !ok {
+        log.Fatal("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+    }
 
-	for _, tx := range block.Transactions() {
-		fmt.Println(tx.Hash().Hex())        // 0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5
-		fmt.Println(tx.Value().String())    // 100000000000000000
-		fmt.Println(tx.Gas())               // 21000
-		fmt.Println(tx.GasPrice().Uint64()) // 100000000000
-		fmt.Println(tx.Nonce())             // 245132
-		fmt.Println(tx.Data())              // []
-		fmt.Println(tx.To().Hex())          // 0x8F9aFd209339088Ced7Bc0f57Fe08566ADda3587
+    fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+    nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-		// restore sender addr
-		if sender, err := types.Sender(types.NewEIP155Signer(chainID), tx); err == nil {
-			fmt.Println("sender", sender.Hex()) // 0x2CdA41645F2dBffB852a605E92B185501801FC28
-		} else {
-			log.Fatal(err)
-		}
+    value := big.NewInt(0) // in wei (0 eth)
+    gasPrice, err := client.SuggestGasPrice(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
 
-		// query the receipt through tx hash
-		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-		if err != nil {
-			log.Fatal(err)
-		}
+    toAddress := common.HexToAddress("0x4592d8f8d7b001e72cb26a73e4fa1806a51ac79d")
+    tokenAddress := common.HexToAddress("0x28b149020d2152179873ec60bed6bf7cd705775d")
 
-		fmt.Println(receipt.Status) // 1
-		fmt.Println(receipt.Logs)   // []
+    transferFnSignature := []byte("transfer(address,uint256)")
+    hash := sha3.NewLegacyKeccak256()
+    hash.Write(transferFnSignature)
+    methodID := hash.Sum(nil)[:4]
+    fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
+    paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+    fmt.Println(hexutil.Encode(paddedAddress)) // 0x0000000000000000000000004592d8f8d7b001e72cb26a73e4fa1806a51ac79d
+    amount := new(big.Int)
+    amount.SetString("1000000000000000000000", 10) // 1000 tokens
+    paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+    fmt.Println(hexutil.Encode(paddedAmount)) // 0x00000000000000000000000000000000000000000000003635c9adc5dea00000
+    var data []byte
+    data = append(data, methodID...)
+    data = append(data, paddedAddress...)
+    data = append(data, paddedAmount...)
 
-		// only query the latest block
-		break
-	}
+    gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+        To:   &toAddress,
+        Data: data,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(gasLimit) // 23256
+    tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
 
-	//////  Method 2: query the latest block
+    chainID, err := client.NetworkID(context.Background())
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// 获取区块哈希  将一个十六进制字符串转换为以太坊的哈希值，表示一个特定的区块
-	blockHash := common.HexToHash("0xae713dea1419ac72b928ebe6ba9915cd4fc1ef125a606f90f5e783c47cb1a4b5")
-	// 获取区块中的交易数量
-	count, err := client.TransactionCount(context.Background(), blockHash)
-	if err != nil {
-		log.Fatal(err) // 如果发生错误，则记录错误并终止程序
-	}
-	// 遍历区块中的交易
-	for idx := uint(0); idx < count; idx++ {
-		// 对于每个交易，调用 client.TransactionInBlock 方法获取交易信息，并打印交易的哈希值
-		tx, err := client.TransactionInBlock(context.Background(), blockHash, idx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// 打印交易哈希
-		fmt.Println(tx.Hash().Hex()) // 0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5
-		break                        // 只处理第一个交易
-	}
-	// 获取特定交易的详细信息
-	txHash := common.HexToHash("0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5") // 先将一个交易哈希转换为哈希值
-	tx, isPending, err := client.TransactionByHash(context.Background(), txHash)                     //然后调用 client.TransactionByHash 方法获取该交易的详细信息; 该方法还返回一个布尔值 isPending
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(isPending)
-	fmt.Println(tx.Hash().Hex()) // 0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5.Println(isPending)       // false
+    signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    err = client.SendTransaction(context.Background(), signedTx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent: 0xa56316b637a94c4cc0331c73ef26389d6c097506d581073f927275e7a6ece0bc
 }
-
-/*
-go run main.go
-0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5
-100000000000000000
-21000
-100000000000
-245132
-[]
-0x8F9aFd209339088Ced7Bc0f57Fe08566ADda3587
-sender 0x2CdA41645F2dBffB852a605E92B185501801FC28
-1
-[]
-0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5
-false
-0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5
-
-总结
-这段代码展示了如何使用 Go 语言与以太坊区块链进行交互，获取特定区块中的交易数量，遍历交易并获取特定交易的详细信息。通过这些操作，可以实现对以太坊区块链的基本查询和操作。
-*/
