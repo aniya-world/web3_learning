@@ -63,8 +63,12 @@ func main() {
 
 	//////  Method 2: query the latest block
 
-	// 获取区块哈希  将一个十六进制字符串转换为以太坊的哈希值，表示一个特定的区块
+	// 获取区块哈希  将一个十六进制字符串转换为以太坊的哈希值，表示一个特定的区块  // "区块哈希:", header.Hash().Hex()
+		// a. 如果您知道区块的编号，可以使用 HeaderByNumber 方法先获取区块头信息，然后从区块头中获取哈希
+		// b. 如果您已经拥有一个区块的哈希，可以使用 BlockByHash 方法获取完整的区块信息，其中也包含区块自身的哈希。
 	blockHash := common.HexToHash("0xae713dea1419ac72b928ebe6ba9915cd4fc1ef125a606f90f5e783c47cb1a4b5")
+	// 是以太坊区块链中一个特定区块的唯一标识符。它不是通过 tx.Hash().Hex() 这样的交易操作直接生成的，而是代表了整个区块的内容（包括区块头中的各种信息和包含的交易列表）经过哈希算法计算得到的固定长度的字符串
+	
 	// 获取区块中的交易数量
 	count, err := client.TransactionCount(context.Background(), blockHash)
 	if err != nil {
@@ -87,8 +91,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(isPending)
-	fmt.Println(tx.Hash().Hex()) // 0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5.Println(isPending)       // false
+	fmt.Println(isPending)  // false
+	fmt.Println(tx.Hash().Hex()) // 0x20294a03e8766e9aeab58327fc4112756017c6c28f6f99c7722f4a29075601c5    
 }
 
 /*
